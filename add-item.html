@@ -1,331 +1,222 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Inventory Item</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .form-container {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #34495e;
-        }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #27ae60;
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            width: 100%;
-        }
-        .nav-links {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .nav-links a {
-            color: #3498db;
-            text-decoration: none;
-            margin: 0 10px;
-            padding: 8px 16px;
-            border: 1px solid #3498db;
-            border-radius: 5px;
-        }
-        .info-note {
-            background: #e8f4fd;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .error-state {
-            text-align: center;
-            padding: 20px;
-            color: #e74c3c;
-            background: #f8d7da;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="form-container">
-        <h1>➕ Add/Update Inventory Item</h1>
-        
-        <div id="supabaseError"></div>
-        
-        <div class="info-note">
-            💡 <strong>Note:</strong> Beginning Stock is set only when you first add an item. For existing items, only Ending Stock will be updated.
-        </div>
-        
-        <form id="inventoryForm">
-            <div class="form-group">
-                <label for="itemCategory">Items:</label>
-                <select id="itemCategory" required>
-                    <option value="">Select item</option>
-                    <option value="Gula/Sugar (PKT)">Gula/Sugar (PKT)</option>
-                    <option value="Kopi (PKT)">Kopi (PKT)</option>
-                    <option value="MILO (TIN)">MILO (TIN)</option>
-                    <option value="Susu Pekat/Condensed Milk (CAN)">Susu Pekat/Condensed Milk (CAN)</option>
-                    <option value="Susu Pekat/Condensed Milk (PKT)">Susu Pekat/Condensed Milk (PKT)</option>
-                    <option value="Susu Cair/Evaporated Milk (CAN)">Susu Cair/Evaporated Milk (CAN)</option>
-                    <option value="Syrup Oren">Syrup Oren</option>
-                    <option value="Syrup Rose">Syrup Rose</option>
-                    <option value="Syrup Jagung/Corn">Syrup Jagung/Corn</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="beginningStock">Beginning Stock (Initial Quantity):</label>
-                <input type="number" id="beginningStock" placeholder="Enter initial quantity" min="1">
-            </div>
-            
-            <div class="form-group">
-                <label for="endingStock">Ending Stock (Current Quantity):</label>
-                <input type="number" id="endingStock" placeholder="Enter current quantity" min="0" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="dateUpdated">Last Updated:</label>
-                <input type="date" id="dateUpdated" required>
-            </div>
-            
-            <button type="submit" id="submitBtn">Save to Inventory</button>
-        </form>
-        
-        <div class="nav-links">
-            <a href="index.html">📊 View Dashboard</a>
-            <a href="#" onclick="clearAllData()">🗑️ Clear All Data</a>
-        </div>
-    </div>
+<script>
+    // Supabase Configuration - USE YOUR ACTUAL CREDENTIALS!
+    const SUPABASE_CONFIG = {
+        url: 'https://XYZ.supabase.co',
+        anonKey: 'ABC'
+    };
 
-    <script>
-        // Supabase Configuration - REPLACE WITH YOUR ACTUAL CREDENTIALS!
-        const SUPABASE_CONFIG = {
-            url: 'https://pcrsiifyhsltouxplqsl.supabase.co',
-            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjcnNpaWZ5aHNsdG91eHBscXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzMDU0NjEsImV4cCI6MjA3ODg4MTQ2MX0.zIFUEq6dNJ-Ys3sCcZGAFnssPHNzxPcrUz-z8Ho3v_4'
-        };
-
-        // Debug: Check if form handler is working
-console.log('Script loaded - checking form setup...');
-
-// Test if form exists
-const form = document.getElementById('inventoryForm');
-console.log('Form element:', form);
-
-// Test if event listener is attached
-if (form) {
-    form.addEventListener('submit', function(e) {
-        console.log('Form submit event triggered!');
-        e.preventDefault();
-        console.log('Default behavior prevented');
-        handleFormSubmit();
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded - starting form app');
+        initializeFormApp();
     });
-    console.log('Form event listener attached');
-} else {
-    console.error('Form element not found!');
-}
 
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded');
-            initializeFormApp();
-        });
-
-        function createSupabaseClient() {
-            return {
-                from: (table) => ({
-                    select: () => ({
-                        eq: (column, value) => ({
-                            async single() {
-                                const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/${table}?${column}=eq.${encodeURIComponent(value)}`, {
-                                    headers: {
-                                        'apikey': SUPABASE_CONFIG.anonKey,
-                                        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
-                                        'Content-Type': 'application/json'
-                                    }
-                                });
-                                if (!response.ok) throw new Error(await response.text());
-                                const data = await response.json();
-                                return { data: data[0], error: data.length === 0 ? { code: 'PGRST116' } : null };
-                            }
-                        })
-                    }),
-                    insert: (items) => ({
+    function createSupabaseClient() {
+        return {
+            from: (table) => ({
+                select: () => ({
+                    eq: (column, value) => ({
                         async single() {
-                            const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/${table}`, {
-                                method: 'POST',
+                            console.log('Checking if item exists:', column, value);
+                            const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/${table}?${column}=eq.${encodeURIComponent(value)}`, {
+                                headers: {
+                                    'apikey': SUPABASE_CONFIG.anonKey,
+                                    'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            if (!response.ok) throw new Error(await response.text());
+                            const data = await response.json();
+                            return { data: data[0], error: data.length === 0 ? { code: 'PGRST116' } : null };
+                        }
+                    })
+                }),
+                insert: (items) => ({
+                    async single() {
+                        console.log('Inserting item:', items[0]);
+                        const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/${table}`, {
+                            method: 'POST',
+                            headers: {
+                                'apikey': SUPABASE_CONFIG.anonKey,
+                                'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=representation'
+                            },
+                            body: JSON.stringify(items[0])
+                        });
+                        if (!response.ok) throw new Error(await response.text());
+                        const data = await response.json();
+                        return { data: data[0], error: null };
+                    }
+                }),
+                update: (updates) => ({
+                    eq: (column, value) => ({
+                        async single() {
+                            console.log('Updating item:', column, value, updates);
+                            const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/${table}?${column}=eq.${encodeURIComponent(value)}`, {
+                                method: 'PATCH',
                                 headers: {
                                     'apikey': SUPABASE_CONFIG.anonKey,
                                     'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
                                     'Content-Type': 'application/json',
                                     'Prefer': 'return=representation'
                                 },
-                                body: JSON.stringify(items[0])
+                                body: JSON.stringify(updates)
                             });
                             if (!response.ok) throw new Error(await response.text());
                             const data = await response.json();
                             return { data: data[0], error: null };
                         }
-                    }),
-                    update: (updates) => ({
-                        eq: (column, value) => ({
-                            async single() {
-                                const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/${table}?${column}=eq.${encodeURIComponent(value)}`, {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'apikey': SUPABASE_CONFIG.anonKey,
-                                        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
-                                        'Content-Type': 'application/json',
-                                        'Prefer': 'return=representation'
-                                    },
-                                    body: JSON.stringify(updates)
-                                });
-                                if (!response.ok) throw new Error(await response.text());
-                                const data = await response.json();
-                                return { data: data[0], error: null };
-                            }
-                        })
                     })
                 })
-            };
-        }
+            })
+        };
+    }
 
-        function initializeFormApp() {
-            if (!SUPABASE_CONFIG.url || SUPABASE_CONFIG.url.includes('your-actual-project-ref')) {
-                const errorDiv = document.getElementById('supabaseError');
-                if (errorDiv) {
-                    errorDiv.innerHTML = `
-                        <div class="error-state">
-                            <h2>⚠️ Configuration Error</h2>
-                            <p>Please configure Supabase credentials in the code</p>
-                        </div>
-                    `;
-                }
-                return;
+    function initializeFormApp() {
+        console.log('Initializing form app...');
+        
+        // Check credentials
+        if (!SUPABASE_CONFIG.url || SUPABASE_CONFIG.url.includes('XYZ')) {
+            const errorDiv = document.getElementById('supabaseError');
+            if (errorDiv) {
+                errorDiv.innerHTML = `
+                    <div class="error-state">
+                        <h2>⚠️ Configuration Error</h2>
+                        <p>Please configure Supabase credentials with your actual values</p>
+                    </div>
+                `;
             }
-
-            window.supabase = createSupabaseClient();
-            console.log('Supabase client created for form');
-            setupForm();
+            console.error('Supabase credentials not configured');
+            return;
         }
 
-        function setupForm() {
-            document.getElementById('dateUpdated').valueAsDate = new Date();
-            
-            document.getElementById('inventoryForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                await handleFormSubmit();
-            });
+        window.supabase = createSupabaseClient();
+        console.log('Supabase client created');
+        setupForm();
+    }
+
+    function setupForm() {
+        console.log('Setting up form...');
+        
+        // Set today's date
+        document.getElementById('dateUpdated').valueAsDate = new Date());
+        
+        // Get form element
+        const form = document.getElementById('inventoryForm');
+        if (!form) {
+            console.error('Form element not found!');
+            return;
         }
         
-        async function handleFormSubmit() {
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Saving...';
+        console.log('Form found, adding event listener');
+        
+        // Add single event listener
+        form.addEventListener('submit', async function(e) {
+            console.log('Form submitted - preventing default');
+            e.preventDefault();
+            await handleFormSubmit();
+        });
+        
+        console.log('Form setup complete');
+    }
+    
+    async function handleFormSubmit() {
+        console.log('handleFormSubmit called');
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+        
+        // Get form values
+        const items = document.getElementById('itemCategory').value;
+        const last_updated = document.getElementById('dateUpdated').value;
+        const ending_stock = parseInt(document.getElementById('endingStock').value);
+        const beginning_stock = parseInt(document.getElementById('beginningStock').value) || 0;
+        
+        console.log('Form values:', { items, last_updated, ending_stock, beginning_stock });
+        
+        try {
+            console.log('Checking if item exists...');
+            const { data: existingItem, error: checkError } = await window.supabase
+                .from('inventory')
+                .select()
+                .eq('Items', items)
+                .single();
             
-            const items = document.getElementById('itemCategory').value;
-            const last_updated = document.getElementById('dateUpdated').value;
-            const ending_stock = parseInt(document.getElementById('endingStock').value);
-            const beginning_stock = parseInt(document.getElementById('beginningStock').value) || 0;
+            if (checkError && checkError.code !== 'PGRST116') {
+                throw checkError;
+            }
             
-            try {
-                const { data: existingItem } = await window.supabase
+            console.log('Existing item check result:', existingItem);
+            
+            if (existingItem) {
+                console.log('Updating existing item');
+                const { error } = await window.supabase
                     .from('inventory')
-                    .select()
-                    .eq('Items', items)
-                    .single();
+                    .update({
+                        "Last Updated": last_updated,
+                        "Ending Stock": ending_stock
+                    })
+                    .eq('Items', items);
                 
-                if (existingItem) {
-                    await window.supabase
-                        .from('inventory')
-                        .update({
-                            "Last Updated": last_updated,
-                            "Ending Stock": ending_stock
-                        })
-                        .eq('Items', items);
-                    
-                    alert(`✅ "${items}" updated!`);
-                } else {
-                    if (!beginning_stock) {
-                        alert('⚠️ Please enter Beginning Stock for new items');
-                        return;
-                    }
-                    
-                    const reorder_point = Math.max(1, Math.floor(beginning_stock * 0.5));
-                    
-                    await window.supabase
-                        .from('inventory')
-                        .insert([{
-                            "Items": items,
-                            "Last Updated": last_updated,
-                            "Beginning Stock": beginning_stock,
-                            "Ending Stock": ending_stock,
-                            "Reorder Point": reorder_point,
-                            "Status": ending_stock <= reorder_point ? "Low Stock" : "In Stock"
-                        }]);
-                    
-                    alert(`✅ "${items}" added to inventory!`);
+                if (error) throw error;
+                console.log('Update successful');
+                alert(`✅ "${items}" updated!`);
+            } else {
+                console.log('Inserting new item');
+                if (!beginning_stock) {
+                    alert('⚠️ Please enter Beginning Stock for new items');
+                    return;
                 }
                 
-                document.getElementById('inventoryForm').reset();
-                document.getElementById('dateUpdated').valueAsDate = new Date();
+                const reorder_point = Math.max(1, Math.floor(beginning_stock * 0.5));
+                console.log('Reorder point calculated:', reorder_point);
                 
+                const { error } = await window.supabase
+                    .from('inventory')
+                    .insert([{
+                        "Items": items,
+                        "Last Updated": last_updated,
+                        "Beginning Stock": beginning_stock,
+                        "Ending Stock": ending_stock,
+                        "Reorder Point": reorder_point,
+                        "Status": ending_stock <= reorder_point ? "Low Stock" : "In Stock"
+                    }]);
+                
+                if (error) throw error;
+                console.log('Insert successful');
+                alert(`✅ "${items}" added to inventory!`);
+            }
+            
+            // Reset form
+            document.getElementById('inventoryForm').reset();
+            document.getElementById('dateUpdated').valueAsDate = new Date());
+            console.log('Form reset');
+            
+        } catch (error) {
+            console.error('Error in handleFormSubmit:', error);
+            alert('❌ Error: ' + error.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save to Inventory';
+            console.log('Form submit process completed');
+        }
+    }
+    
+    async function clearAllData() {
+        if (confirm('Clear ALL inventory data? This cannot be undone!')) {
+            try {
+                await window.supabase
+                    .from('inventory')
+                    .delete()
+                    .neq('Items', 'dummy');
+                
+                alert('All data cleared!');
             } catch (error) {
-                alert('❌ Error: ' + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Save to Inventory';
+                alert('Error: ' + error.message);
             }
         }
-        
-        async function clearAllData() {
-            if (confirm('Clear ALL inventory data? This cannot be undone!')) {
-                try {
-                    await window.supabase
-                        .from('inventory')
-                        .delete()
-                        .neq('Items', 'dummy');
-                    
-                    alert('All data cleared!');
-                } catch (error) {
-                    alert('Error: ' + error.message);
-                }
-            }
-        }
+    }
 
-        window.clearAllData = clearAllData;
-    </script>
-</body>
-
-</html>
-
+    window.clearAllData = clearAllData;
+</script>
