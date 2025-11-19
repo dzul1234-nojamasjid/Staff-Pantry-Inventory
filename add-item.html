@@ -225,6 +225,29 @@
         checkLoginStatus();
     });
 
+    // ==================== DATE FUNCTIONS ====================
+    // Get current date in Singapore timezone (GMT+8)
+    function getSingaporeDate() {
+        const now = new Date();
+        // Singapore is UTC+8, convert to Singapore time
+        const singaporeTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+        return singaporeTime.toISOString().split('T')[0];
+    }
+
+    // Format date for CSV export in Singapore time
+    function formatDateForCSV(dateString) {
+        if (!dateString) return '';
+        
+        const date = new Date(dateString);
+        const singaporeDate = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+        
+        const day = String(singaporeDate.getDate()).padStart(2, '0');
+        const month = String(singaporeDate.getMonth() + 1).padStart(2, '0');
+        const year = singaporeDate.getFullYear();
+        
+        return `${day}/${month}/${year}`;
+    }
+
     // ==================== LOGIN SYSTEM ====================
     function checkLoginStatus() {
         const isLoggedIn = localStorage.getItem('pantryLoggedIn') === 'true';
@@ -319,8 +342,8 @@
     function setupForm() {
         console.log('Setting up form...');
         
-        // Set today's date
-        const today = new Date().toISOString().split('T')[0];
+        // Set today's date in Singapore timezone
+        const today = getSingaporeDate();
         document.getElementById('dateUpdated').value = today;
         
         // Get form element
@@ -491,9 +514,9 @@
                 showSuccess(`✅ "${itemName}" added to inventory successfully!`);
             }
             
-            // Reset form but keep today's date
+            // Reset form but keep today's date in Singapore time
             document.getElementById('inventoryForm').reset();
-            document.getElementById('dateUpdated').value = new Date().toISOString().split('T')[0];
+            document.getElementById('dateUpdated').value = getSingaporeDate();
             document.getElementById('beginningStock').disabled = false;
             console.log('Form reset');
             
@@ -525,12 +548,12 @@
             }
             
             // Create CSV content
-            const headers = ['Items', 'Last Updated', 'Beginning Stock', 'Reorder Point', 'Current Stock', 'Status'];
+            const headers = ['Items', 'Last Updated', 'Beginning Stock From Day 1', 'Reorder Point from Day 1 record', 'Current Stock in our Pantry', 'Status'];
             const csvContent = [
                 headers.join(','),
                 ...inventory.map(item => [
                     `"${item.Items || ''}"`,
-                    `"${item['Last Updated'] || ''}"`,
+                    `"${formatDateForCSV(item['Last Updated']) || ''}"`,
                     item['Beginning Stock'] || 0,
                     item['Reorder Point'] || 0,
                     item['Ending Stock'] || 0,
@@ -580,7 +603,7 @@
             alert('✅ All inventory data has been cleared!');
             // Reset form
             document.getElementById('inventoryForm').reset();
-            document.getElementById('dateUpdated').value = new Date().toISOString().split('T')[0];
+            document.getElementById('dateUpdated').value = getSingaporeDate();
         } catch (error) {
             console.error('Error clearing data:', error);
             alert('❌ Error clearing data: ' + error.message);
@@ -595,4 +618,3 @@
     </script>
 </body>
 </html>
-
