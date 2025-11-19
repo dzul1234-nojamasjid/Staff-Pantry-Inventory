@@ -36,15 +36,18 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            font-size: 14px;
         }
         th, td {
-            padding: 12px 15px;
+            padding: 10px 12px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
         th {
             background-color: #34495e;
             color: white;
+            position: sticky;
+            top: 0;
         }
         tr:hover {
             background-color: #f5f5f5;
@@ -59,17 +62,20 @@
         .nav-links a, .nav-links button {
             background: #3498db;
             color: white;
-            padding: 10px 20px;
+            padding: 8px 16px;
             text-decoration: none;
             border-radius: 5px;
             display: inline-block;
-            margin: 0 10px;
+            margin: 5px;
             border: none;
             cursor: pointer;
             font-size: 14px;
         }
-        .nav-links button:hover, .nav-links a:hover {
-            background: #2980b9;
+        .nav-links .admin-btn {
+            background: #e74c3c;
+        }
+        .nav-links .export-btn {
+            background: #9b59b6;
         }
         .empty-state, .loading {
             text-align: center;
@@ -97,6 +103,12 @@
         .login-btn {
             background-color: #3498db;
         }
+        .admin-only {
+            display: none;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -108,16 +120,13 @@
         <div class="login-form">
             <div class="form-group">
                 <label for="username">Username:</label>
-                <input type="text" id="username" placeholder="Enter username" value="admin">
+                <input type="text" id="username" placeholder="Enter username">
             </div>
             <div class="form-group">
                 <label for="password">Password:</label>
-                <input type="password" id="password" placeholder="Enter password" value="password123">
+                <input type="password" id="password" placeholder="Enter password">
             </div>
             <button onclick="login()" class="login-btn">Login</button>
-        </div>
-        <div style="margin-top: 20px; font-size: 12px; color: #7f8c8d;">
-            Default: admin / password123
         </div>
     </div>
 
@@ -128,12 +137,15 @@
         <div class="nav-links">
             <a href="add-item.html">➕ Add New Item</a>
             <button onclick="loadInventory()">🔄 Refresh</button>
+            <button onclick="exportToCSV()" class="export-btn">📥 Export to CSV</button>
             <button onclick="logout()">🚪 Logout</button>
-            <button onclick="clearAllData()">🗑️ Clear All Data</button>
+            <button onclick="clearAllData()" class="admin-only admin-btn">🗑️ Clear All Data (Admin Only)</button>
         </div>
         
-        <div id="inventoryTable">
-            <div class="loading">Loading inventory data...</div>
+        <div class="table-container">
+            <div id="inventoryTable">
+                <div class="loading">Loading inventory data...</div>
+            </div>
         </div>
         
         <div id="lastUpdated" class="last-updated"></div>
@@ -145,8 +157,10 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjcnNpaWZ5aHNsdG91eHBscXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzMDU0NjEsImV4cCI6MjA3ODg4MTQ2MX0.zIFUEq6dNJ-Ys3sCcZGAFnssPHNzxPcrUz-z8Ho3v_4';  // Replace with your actual anon key
 
     // Login Configuration - CHANGE THESE FOR SECURITY!
-    const VALID_USERNAME = 'pantry1';
+    const VALID_USERNAME = 'admin';
     const VALID_PASSWORD = 'password123';
+    const ADMIN_USERNAME = 'superadmin';  // Separate admin username
+    const ADMIN_PASSWORD = 'admin123';    // Separate admin password
 
     // ==================== APP INITIALIZATION ====================
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -170,8 +184,9 @@
     // ==================== LOGIN SYSTEM ====================
     function checkLoginStatus() {
         const isLoggedIn = localStorage.getItem('pantryLoggedIn') === 'true';
+        const userRole = localStorage.getItem('pantryUserRole');
         if (isLoggedIn) {
-            showMainApp();
+            showMainApp(userRole);
         } else {
             showLogin();
         }
@@ -181,9 +196,14 @@
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
         
-        if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+        if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
             localStorage.setItem('pantryLoggedIn', 'true');
-            showMainApp();
+            localStorage.setItem('pantryUserRole', 'admin');
+            showMainApp('admin');
+        } else if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+            localStorage.setItem('pantryLoggedIn', 'true');
+            localStorage.setItem('pantryUserRole', 'user');
+            showMainApp('user');
         } else {
             alert('Invalid username or password');
         }
@@ -191,6 +211,7 @@
 
     function logout() {
         localStorage.removeItem('pantryLoggedIn');
+        localStorage.removeItem('pantryUserRole');
         showLogin();
     }
 
@@ -199,9 +220,17 @@
         document.getElementById('mainSection').style.display = 'none';
     }
 
-    function showMainApp() {
+    function showMainApp(role) {
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('mainSection').style.display = 'block';
+        
+        // Show admin buttons only for admin users
+        if (role === 'admin') {
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = 'inline-block';
+            });
+        }
+        
         initializeApp();
     }
 
@@ -229,7 +258,7 @@
 
     // Calculate status based on your new requirements
     function calculateStatus(beginningStock, endingStock) {
-        if (beginningStock === 0) return "No Data";
+        if (beginningStock === 0) return { status: "No Data", class: "status-warning" };
         
         const usagePercentage = ((beginningStock - endingStock) / beginningStock) * 100;
         
@@ -277,10 +306,11 @@
                         <tr>
                             <th>Items</th>
                             <th>Last Updated</th>
-                            <th>Beginning Stock</th>
-                            <th>Reorder Point</th>
-                            <th>Ending Stock</th>
+                            <th>Beginning Stock From Day 1<br><small>(No Changes can be made)</small></th>
+                            <th>Reorder Point from Day 1 record<br><small>(No Changes can be made)</small></th>
+                            <th>Current Stock in our Pantry</th>
                             <th>Stock Used</th>
+                            <th>Usage %</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -303,7 +333,8 @@
                         <td>${beginningStock}</td>
                         <td>${reorderPoint}</td>
                         <td><strong>${endingStock}</strong></td>
-                        <td>${stockUsed} (${usagePercentage}%)</td>
+                        <td>${stockUsed}</td>
+                        <td>${usagePercentage}%</td>
                         <td class="${statusInfo.class}">${statusInfo.status}</td>
                     </tr>
                 `;
@@ -324,6 +355,55 @@
             `;
         }
     }
+
+    // ==================== EXPORT TO CSV ====================
+    async function exportToCSV() {
+        try {
+            const { data: inventory, error } = await supabase
+                .from('inventory')
+                .select('*')
+                .order('Items', { ascending: true });
+            
+            if (error) {
+                throw error;
+            }
+            
+            if (!inventory || inventory.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = ['Items', 'Last Updated', 'Beginning Stock From Day 1', 'Reorder Point from Day 1 record', 'Current Stock in our Pantry', 'Status'];
+            const csvContent = [
+                headers.join(','),
+                ...inventory.map(item => [
+                    `"${item.Items || ''}"`,
+                    `"${item['Last Updated'] || ''}"`,
+                    item['Beginning Stock'] || 0,
+                    item['Reorder Point'] || 0,
+                    item['Ending Stock'] || 0,
+                    `"${item.Status || ''}"`
+                ].join(','))
+            ].join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `pantry-inventory-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert('✅ CSV file downloaded successfully!');
+        } catch (error) {
+            console.error('Error exporting to CSV:', error);
+            alert('❌ Error exporting data: ' + error.message);
+        }
+    }
     
     function updateLastUpdated() {
         if (lastUpdatedElement) {
@@ -333,7 +413,13 @@
     }
     
     async function clearAllData() {
-        if (!confirm('⚠️ Are you sure you want to clear ALL inventory data? This action cannot be undone!')) {
+        const userRole = localStorage.getItem('pantryUserRole');
+        if (userRole !== 'admin') {
+            alert('❌ Access denied. Only administrators can clear data.');
+            return;
+        }
+        
+        if (!confirm('⚠️ ARE YOU SURE YOU WANT TO CLEAR ALL INVENTORY DATA?\n\nThis action cannot be undone and will delete all records!')) {
             return;
         }
         
@@ -360,6 +446,7 @@
     window.clearAllData = clearAllData;
     window.login = login;
     window.logout = logout;
+    window.exportToCSV = exportToCSV;
     </script>
 </body>
 </html>
