@@ -160,7 +160,7 @@
     const VALID_USERNAME = 'admin';
     const VALID_PASSWORD = '11112';
     const ADMIN_USERNAME = 'superadmin';  // Separate admin username
-    const ADMIN_PASSWORD = '1166';        // Separate admin password
+    const ADMIN_PASSWORD = '1166';    // Separate admin password
 
     // ==================== APP INITIALIZATION ====================
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -182,33 +182,74 @@
     });
 
     // ==================== DATE FUNCTIONS ====================
-    // Format date to Singapore format (DD/MM/YYYY) with Singapore timezone
+    // Format date to Singapore format (DD/MM/YYYY) - no timezone conversion needed for dates only
     function formatDateForDisplay(dateString) {
         if (!dateString) return '';
         
         const date = new Date(dateString);
-        // Convert to Singapore time (UTC+8)
-        const singaporeDate = new Date(date.getTime() + (8 * 60 * 60 * 1000));
-        
-        const day = String(singaporeDate.getDate()).padStart(2, '0');
-        const month = String(singaporeDate.getMonth() + 1).padStart(2, '0'); // Months are 0-based
-        const year = singaporeDate.getFullYear();
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
         
         return `${day}/${month}/${year}`;
     }
 
-    // Format date for CSV export in Singapore time
+    // Format date for CSV export
     function formatDateForCSV(dateString) {
         if (!dateString) return '';
         
         const date = new Date(dateString);
-        const singaporeDate = new Date(date.getTime() + (8 * 60 * 60 * 1000));
-        
-        const day = String(singaporeDate.getDate()).padStart(2, '0');
-        const month = String(singaporeDate.getMonth() + 1).padStart(2, '0');
-        const year = singaporeDate.getFullYear();
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
         
         return `${day}/${month}/${year}`;
+    }
+
+    // Get current Singapore time correctly
+    function getCurrentSingaporeTime() {
+        const now = new Date();
+        
+        // For Singapore time, we can use the local time if the user is in Singapore
+        // or use Intl.DateTimeFormat to get Singapore time regardless of user's timezone
+        try {
+            const formatter = new Intl.DateTimeFormat('en-SG', {
+                timeZone: 'Asia/Singapore',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            
+            const parts = formatter.formatToParts(now);
+            const day = parts.find(part => part.type === 'day').value;
+            const month = parts.find(part => part.type === 'month').value;
+            const year = parts.find(part => part.type === 'year').value;
+            const hour = parts.find(part => part.type === 'hour').value;
+            const minute = parts.find(part => part.type === 'minute').value;
+            
+            return {
+                date: `${day}/${month}/${year}`,
+                time: `${hour}:${minute}`,
+                full: `${day}/${month}/${year} ${hour}:${minute} SGT`
+            };
+        } catch (error) {
+            // Fallback to local time if Intl API fails
+            console.warn('Using local time as fallback');
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            
+            return {
+                date: `${day}/${month}/${year}`,
+                time: `${hour}:${minute}`,
+                full: `${day}/${month}/${year} ${hour}:${minute} SGT`
+            };
+        }
     }
 
     // ==================== LOGIN SYSTEM ====================
@@ -303,17 +344,8 @@
 
     function updateLastUpdated() {
         if (lastUpdatedElement) {
-            const now = new Date();
-            // Convert to Singapore time (UTC+8)
-            const singaporeTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-            
-            const day = String(singaporeTime.getDate()).padStart(2, '0');
-            const month = String(singaporeTime.getMonth() + 1).padStart(2, '0');
-            const year = singaporeTime.getFullYear();
-            const hours = String(singaporeTime.getHours()).padStart(2, '0');
-            const minutes = String(singaporeTime.getMinutes()).padStart(2, '0');
-            
-            lastUpdatedElement.textContent = `Last updated: ${day}/${month}/${year} ${hours}:${minutes} SGT`;
+            const singaporeTime = getCurrentSingaporeTime();
+            lastUpdatedElement.textContent = `Last updated: ${singaporeTime.full}`;
         }
     }
 
