@@ -89,8 +89,14 @@
             margin-bottom: 20px;
             display: none;
         }
+        .rls-fix {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
     </style>
-    <!-- Include Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -99,6 +105,10 @@
         
         <div id="supabaseError"></div>
         <div id="successMessage" class="success-message"></div>
+        
+        <div class="rls-fix">
+            <strong>⚠️ RLS Fix Needed:</strong> If you get a "row-level security policy" error, go to Supabase → Authentication → Policies → inventory table and disable RLS, or run the SQL in the instructions.
+        </div>
         
         <div class="info-note">
             💡 <strong>Note:</strong> Beginning Stock is set only when you first add an item. For existing items, only Ending Stock will be updated.
@@ -162,7 +172,7 @@
         console.log('Initializing form app...');
         
         // Check credentials
-        if (!SUPABASE_URL || SUPABASE_URL.includes('abc') || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes('xyz')) {
+        if (!SUPABASE_URL || SUPABASE_URL.includes('your-project') || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes('your-anon-key')) {
             showError('Please configure Supabase credentials with your actual values');
             return;
         }
@@ -254,10 +264,14 @@
                 .from('inventory')
                 .select('*')
                 .eq('Items', itemName)
-                .maybeSingle();  // Use maybeSingle to avoid throwing error if no item found
+                .maybeSingle();
 
             if (checkError) {
                 console.error('Error checking item:', checkError);
+                // If it's an RLS error, provide specific guidance
+                if (checkError.message.includes('row-level security')) {
+                    throw new Error('RLS Policy Blocked: Go to Supabase → Authentication → Policies → inventory table and disable RLS, or run the SQL provided in the instructions.');
+                }
                 throw new Error('Failed to check existing items: ' + checkError.message);
             }
             
@@ -277,6 +291,9 @@
                 
                 if (updateError) {
                     console.error('Update error:', updateError);
+                    if (updateError.message.includes('row-level security')) {
+                        throw new Error('RLS Policy Blocked: Go to Supabase → Authentication → Policies → inventory table and disable RLS, or run the SQL provided in the instructions.');
+                    }
                     throw new Error('Failed to update item: ' + updateError.message);
                 }
                 
@@ -305,6 +322,9 @@
                 
                 if (insertError) {
                     console.error('Insert error:', insertError);
+                    if (insertError.message.includes('row-level security')) {
+                        throw new Error('RLS Policy Blocked: Go to Supabase → Authentication → Policies → inventory table and disable RLS, or run the SQL provided in the instructions.');
+                    }
                     throw new Error('Failed to add item: ' + insertError.message);
                 }
                 
@@ -336,9 +356,12 @@
             const { error } = await supabase
                 .from('inventory')
                 .delete()
-                .neq('Items', ''); // Delete all records
+                .neq('Items', '');
             
             if (error) {
+                if (error.message.includes('row-level security')) {
+                    throw new Error('RLS Policy Blocked: Go to Supabase → Authentication → Policies → inventory table and disable RLS, or run the SQL provided in the instructions.');
+                }
                 throw error;
             }
             
@@ -349,9 +372,7 @@
         }
     }
 
-    // Make functions available globally
     window.clearAllData = clearAllData;
     </script>
 </body>
 </html>
-
